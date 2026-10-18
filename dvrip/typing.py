@@ -76,6 +76,8 @@ def for_json(obj: _V.__bound__) -> object:  # pylint: disable=no-member
 
 
 def json_to(type: Type[_V]) -> Callable[[object], _V]:  # pylint: disable=redefined-builtin, too-many-return-statements
+	origin = typing.get_origin(type)
+	cls = origin if origin is not None else type
 	try:
 		return type.json_to  # type: ignore
 	except AttributeError:
@@ -86,16 +88,17 @@ def json_to(type: Type[_V]) -> Callable[[object], _V]:  # pylint: disable=redefi
 				return _json_to_list(get_args(type)[0])  # type: ignore
 			if get_origin(type) == dict:
 				return _json_to_dict(get_args(type)[1])  # type: ignore
-		if issubclass(type, bool):  # needs to come before 'int'
-			return _json_to_bool  # type: ignore
-		if issubclass(type, int):
-			return _json_to_int  # type: ignore
-		if issubclass(type, str):
-			return _json_to_str  # type: ignore
-		if issubclass(type, list):
-			raise TypeError('no element type specified for list')
-		if issubclass(type, dict):
-			raise TypeError('no value type specified for dict')
+			if isinstance(cls, type) or hasattr(cls, '__subclasses__'):
+				if issubclass(cls, bool):
+					return _json_to_bool
+				if issubclass(cls, int):
+					return _json_to_int
+				if issubclass(cls, str):
+					return _json_to_str
+				if issubclass(cls, list):
+					raise TypeError('no element type specified for list')
+				if issubclass(cls, dict):
+					raise TypeError('no value type specified for dict')
 	raise TypeError('not a JSON value type')
 
 
